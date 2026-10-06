@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "c880a-manager"
+version = "0.2.0"
+description = "Prototype C880A Redfish exporter and fleet manager"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
+  "cryptography>=44,<50",
+  "httpx>=0.27,<1",
+  "psutil>=6,<8",
+  "python-multipart>=0.0.20,<1",
+  "websockets>=17,<18",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10"]
+
+[project.scripts]
+c880a-exporter = "c880a_manager.exporter:main"
+c880a-manager = "c880a_manager.manager:main"
+c880a-trap-ingest = "c880a_manager.trap_ingest:main"
+c880a-console-gateway = "c880a_manager.console_gateway:main"
+c880a-redfish-simulator = "c880a_manager.simulator:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+c880a_manager = ["static/*", "static/fonts/*", "c880a_sensors.tsv"]

@@ -1,0 +1,11 @@
+html,body{margin:0;height:100%;background:#102437;color:#f4f8fb;font:14px system-ui,-apple-system,sans-serif}
+body{display:flex;flex-direction:column}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 16px;border-bottom:1px solid #36536b}
+header strong{white-space:nowrap}
+header span{color:#b4c7d7;font-size:12px}
+header button{margin-left:auto;background:#1873b7;color:white;border:1px solid #50a9df;border-radius:5px;padding:6px 10px;cursor:pointer}
+header button:focus-visible{outline:2px solid white;outline-offset:2px}
+#console-idle-warning{margin:0;padding:9px 16px;background:#664512;color:white}
+#console-expired{margin:20px;padding:16px;border:1px solid #7596ae;border-radius:6px}
+iframe{border:0;flex:1;width:100%;min-height:0;background:#111}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}

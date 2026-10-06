@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cisco UCS C880A M8 – Fleet Operations</title>
+  <link rel="stylesheet" href="/app.css">
+  <script src="/fleet-view.js" defer></script>
+  <script src="/prometheus-return.js" defer></script>
+  <script src="/prometheus-settings.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><strong>Cisco UCS C880A M8</strong><span class="brand-subtitle">Fleet Operations <span id="app-version" class="app-version" hidden><span class="sr-only">Application version </span><span id="app-version-text"></span></span></span></div>
+    <div class="topbar-spacer"></div>
+    <details id="host-resources" class="host-resources" hidden>
+      <summary id="host-resources-summary">Manager host · Measuring…</summary>
+      <div class="host-resources-detail" aria-live="polite">
+        <strong>Manager host</strong>
+        <span id="host-resources-host">Measuring…</span>
+        <strong id="host-resources-app-heading">Manager and child processes</strong>
+        <span id="host-resources-app">Measuring…</span>
+      </div>
+    </details>
+    <details id="account-menu" class="account-menu" hidden>
+      <summary><span id="identity" class="identity"></span><span aria-hidden="true">⌄</span></summary>
+      <div class="account-menu-panel">
+        <span class="account-menu-label">Appearance</span>
+        <div class="theme-options" role="group" aria-label="Appearance">
+          <button type="button" class="theme-choice" data-theme-choice="dark" aria-pressed="true">Dark</button>
+          <button type="button" class="theme-choice" data-theme-choice="light" aria-pressed="false">Light</button>
+        </div>
+        <button id="logout" class="account-signout" hidden>Sign out</button>
+      </div>
+    </details>
+  </header>
+
+  <main id="auth-shell">
+    <p id="notice" role="status" aria-live="polite"></p>
+    <section id="bootstrap" class="auth-card" hidden>
+      <h1>First-time setup</h1>
+      <p>Read the one-time setup token from the manager data directory on the VM. Create the admin password here.</p>
+      <form id="bootstrap-form">
+        <label>Setup token <input name="token" required autocomplete="off"></label>
+        <label>New admin password <input name="password" type="password" minlength="12" required autocomplete="new-password"></label>
+        <button class="button primary">Create admin account</button>
+      </form>
+    </section>
+    <section id="login" class="auth-card" hidden>
+      <h1>Sign in</h1>
+      <form id="login-form">
+        <label>Username <input name="username" value="admin" required autocomplete="username"></label>
+        <label>Password <input name="password" type="password" required autocomplete="current-password"></label>
+        <button class="button primary">Sign in</button>
+      </form>
+    </section>
+    <section id="initial-password" class="auth-card" hidden>
+      <h1>Change the initial password</h1>
+      <p>Set a new password with at least 12 characters.</p>
+      <form id="initial-password-form">
+        <label>New password <input name="password" type="password" minlength="12" maxlength="256" required autocomplete="new-password"></label>
+        <label>Confirm password <input name="confirmation" type="password" minlength="12" maxlength="256" required autocomplete="new-password"></label>
+        <p id="initial-password-error" class="form-error" role="alert" tabindex="-1" hidden></p>
+        <button class="button primary" type="submit">Change password</button>
+        <button id="initial-signout" class="button outline" type="button">Sign out</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="dashboard" class="workspace" hidden>
+    <nav class="sidebar" aria-label="Main navigation">
+      <button id="operate-heading" class="sidebar-heading sidebar-toggle" type="button" aria-expanded="true" aria-controls="operate-nav">Operate<span class="sidebar-chevron" aria-hidden="true">⌄</span></button>
+      <div id="operate-nav" class="sidebar-group" aria-label="Operate">
+        <button id="fleet-tab" class="nav-item active" aria-current="page">Servers</button>
+        <button id="events-tab" class="nav-item">Event Timeline</button>
+        <a id="prometheus-link" class="nav-item" href="/prometheus/" target="_blank" rel="noopener noreferrer" aria-label="Prometheus (opens in a new tab)">Prometheus <span aria-hidden="true">↗</span></a>
+      </div>
+      <button id="configuration-heading" class="sidebar-heading sidebar-toggle second" type="button" aria-expanded="true" aria-controls="configuration-nav" hidden>Configuration<span class="sidebar-chevron" aria-hidden="true">⌄</span></button>
+      <div id="configuration-nav" class="sidebar-group" aria-label="Configuration" hidden>
+        <button id="config-collection-tab" class="nav-item config-nav-item">Collection</button>
+        <button id="config-prometheus-tab" class="nav-item config-nav-item">Prometheus</button>
+        <button id="config-console-tab" class="nav-item config-nav-item">Console &amp; Session</button>
+        <button id="config-users-tab" class="nav-item config-nav-item">Users</button>
+        <button id="config-application-tab" class="nav-item config-nav-item">Application &amp; Network</button>
+        <button id="config-security-tab" class="nav-item config-nav-item">Security</button>
+        <button id="config-backup-tab" class="nav-item config-nav-item">Backup &amp; Restore</button>
+      </div>
+    </nav>
+
+    <main class="content">
+      <div id="workspace-notice" class="workspace-notice">
+        <span id="workspace-notice-text" role="status" aria-live="polite"></span>
+        <button id="dismiss-workspace-notice" class="notice-dismiss" type="button" aria-label="Dismiss notification" hidden>×</button>
+      </div>
+      <div id="fleet-page" class="view">
+        <div class="page-heading">
+          <div><h1>Servers</h1></div>
+          <button id="open-onboard" class="button primary">+ Onboard server</button>
+        </div>
+        <div id="onboarding-jobs" class="onboarding-jobs" aria-label="Background onboarding" hidden></div>
+        <section class="fleet-facets" aria-label="Filter servers by fleet facts">
+          <div class="summary-row" id="fleet-summary"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-heading"><div><h2>All servers</h2><span id="server-count" class="muted"></span></div>
+            <label class="search-label"><span class="sr-only">Search servers</span><input id="server-search" type="search" placeholder="Search by name, IP or model"></label>
+          </div>
+          <div id="fleet-active-filters" class="fleet-active-filters" hidden></div>
+          <div class="table-wrap fleet-scroll" tabindex="0" aria-label="Server table; scroll horizontally for all columns"><table class="data-table fleet-table">
+            <thead><tr><th>Name</th><th>Health</th><th>Model</th><th>BMC endpoint</th><th>BMC firmware</th><th>BIOS version</th><th>Serial number</th><th class="actions-header" aria-label="More actions"></th></tr></thead>
+            <tbody id="server-list"></tbody>
+          </table></div>
+          <p id="fleet-empty" class="empty-state" hidden>No servers match this view.</p>
+          <div id="fleet-pagination" class="fleet-pagination" aria-label="Server pages">
+            <span id="fleet-page-range" class="muted"></span>
+            <label>Rows per page <select id="fleet-page-size"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select></label>
+            <div class="fleet-page-controls"><button id="fleet-prev" class="page-arrow" type="button" aria-label="Previous server page">‹</button><div id="fleet-page-numbers" class="page-numbers" aria-label="Server page numbers"></div><button id="fleet-next" class="page-arrow" type="button" aria-label="Next server page">›</button></div>
+          </div>
+        </section>
+      </div>
+
+      <div id="detail-page" class="view" hidden>
+        <button id="back-to-fleet" class="text-button">← Servers</button>
+        <div class="page-heading detail-heading"><div><p id="detail-breadcrumb" class="eyebrow">Operate / Servers / General</p><h1><span id="detail-power-icon" class="power-icon unknown" aria-label="Power status unknown" title="Power status unknown">⏻</span><span id="detail-name">Server</span></h1><div id="detail-badges" class="badge-line"></div></div>
+          <div class="detail-heading-actions"><a id="detail-metrics-link" class="button outline" href="#" target="_blank" rel="noopener noreferrer">Open exporter metrics ↗</a><button id="detail-actions" class="button action-trigger" type="button" aria-label="More server actions" aria-haspopup="menu" aria-expanded="false">⋯</button></div>
+        </div>
+        <div class="tabs" aria-label="Server details"><button id="detail-general-tab" class="tab active" type="button" aria-current="page">General</button><button id="detail-inventory-tab" class="tab" type="button">Inventory</button><button id="detail-metrics-tab" class="tab" type="button">Metrics</button></div>
+        <p id="detail-source-status" class="read-status" role="status" aria-live="polite" hidden></p>
+        <div id="detail-content" class="detail-grid" hidden>
+          <section class="panel detail-identity"><h2>Details</h2><dl id="detail-fields" class="definition-list"></dl></section>
+          <div class="detail-main">
+            <section class="panel"><h2>Properties</h2><div id="detail-properties" class="property-grid"></div></section>
+            <section class="panel"><h2>Collection</h2><div id="detail-collection" class="property-grid"></div></section>
+          </div>
+          <section class="panel detail-events"><div class="panel-heading"><h2>Recent events</h2><button id="detail-all-events" class="text-button">View timeline →</button></div><div id="detail-event-list"></div></section>
+        </div>
+        <div id="detail-inventory" hidden>
+          <p id="inventory-status" class="read-status" role="status" aria-live="polite"></p>
+          <section class="panel inventory-toolbar"><h2>Redfish asset inventory</h2><button id="inventory-refresh" class="button outline" type="button">Refresh inventory</button></section>
+          <div id="inventory-feedback" class="read-feedback panel" hidden><span id="inventory-feedback-text"></span><button id="inventory-retry" class="text-button" type="button">Retry view</button></div>
+          <div class="inventory-layout"><nav id="inventory-categories" class="panel inventory-categories" aria-label="Inventory categories"></nav><section class="panel inventory-results"><div class="panel-heading"><div><button id="inventory-back" class="inventory-back" type="button" hidden>← Back to components</button><h2 id="inventory-category-title">Inventory</h2><span id="inventory-count" class="muted"></span></div><label id="inventory-search-label" class="search-label"><span class="sr-only">Search components</span><input id="inventory-search" type="search" placeholder="Search this category"></label></div><div id="inventory-table" class="table-wrap"></div><div id="inventory-detail" class="inventory-detail" hidden></div><div id="inventory-pager" class="inventory-pager"><button id="inventory-prev" class="page-arrow" type="button" aria-label="Previous inventory page">‹</button><div id="inventory-page-numbers" class="page-numbers" aria-label="Inventory page numbers"></div><button id="inventory-next" class="page-arrow" type="button" aria-label="Next inventory page">›</button></div></section></div>
+        </div>
+        <div id="detail-metrics" hidden>
+          <p id="metrics-live-status" class="read-status" role="status" aria-live="polite">Checking readings…</p>
+          <section id="metrics-disabled-banner" class="panel metrics-disabled-banner" hidden><h2>Manager metrics are disabled for this server</h2><p>Last-known readings only; manager history is paused.</p><details><summary>What does this mean?</summary><p>External exporter scrapes continue independently.</p></details></section>
+          <section class="panel metrics-collection-setting"><div><h2>Manager metric collection</h2><p id="metrics-collection-note" class="muted">The standalone exporter remains available for external Prometheus scrapes.</p></div></section>
+          <section class="panel dashboard-section" id="metrics-live-section"><div class="panel-heading"><h2>Latest readings</h2><button id="metrics-refresh" class="button outline" type="button">Refresh</button></div>
+            <div id="metrics-live-cards" class="live-grid"></div>
+            <div class="temperature-section"><h3>Temperatures</h3><label class="search-label"><span class="sr-only">Filter temperatures</span><input id="temperature-search" type="search" placeholder="Filter sensors"></label><div id="metrics-temperatures" class="temperature-grid"></div></div></section>
+          <section class="panel dashboard-section" id="metric-catalog-section"><div class="panel-heading"><div><h2>Metric explorer</h2><span class="muted">Saved values · checked every 15 seconds.</span><p id="metric-catalog-status" class="read-status" role="status" aria-live="polite"></p></div><button id="metric-catalog-retry" class="text-button" type="button" hidden>Retry view</button></div>
+            <div class="metrics-tools"><label class="search-label"><span class="sr-only">Search metric series</span><input id="metric-search" type="search" placeholder="Search metrics or sensors"></label><span id="metric-count" class="muted"></span></div>
+            <div class="table-wrap"><table class="data-table metrics-table"><thead><tr><th>Metric</th><th>Sensor / endpoint</th><th id="metric-last-heading">Last value</th><th>Value time</th><th></th></tr></thead><tbody id="metric-list"></tbody></table></div>
+            <p id="metric-empty" class="empty-state" hidden>No exporter metrics match this search yet.</p></section>
+        </div>
+      </div>
+
+      <div id="configuration-page" class="view" hidden>
+        <div class="page-heading"><div><p id="config-breadcrumb" class="config-breadcrumb">Configuration / Collection</p><h1 id="config-title" tabindex="-1">Collection</h1></div></div>
+        <div id="config-collection-view" class="config-view">
+        <section class="panel config-panel"><h2>Fleet collection intervals</h2><p class="muted">Manager polling intervals. Changes apply immediately.</p><form id="collection-settings-form"><label>Inventory refresh (seconds, 300–86400)<input name="inventory_interval_seconds" type="number" min="300" max="86400" required><small>Default 3600.</small></label><label>Health and power check (seconds, 60–3600)<input name="health_check_interval_seconds" type="number" min="60" max="3600" required><small>Default 300.</small></label><label>Lightweight metrics (seconds, 30–600)<input name="live_metrics_interval_seconds" type="number" min="30" max="600" required><small>Enabled manager targets only.</small></label><label>Full manager scrape (seconds, 60–3600)<input name="manager_scrape_interval_seconds" type="number" min="60" max="3600" required><small>Enabled manager targets only.</small></label><button class="button primary" type="submit">Save collection settings</button></form></section>
+        <section class="panel config-panel"><h2>Per-server inventory overrides</h2><p class="muted">Blank interval inherits the fleet default.</p><div id="config-targets"></div></section>
+        <section class="panel config-panel"><h2>Retention and event cadence</h2><p class="muted">Fixed values.</p><div id="config-collection-facts" class="config-facts"></div></section>
+        </div>
+        <div id="config-prometheus-view" class="config-view" hidden>
+          <section class="panel config-panel">
+            <h2>Managed Prometheus</h2>
+            <label class="config-confirm"><input id="prometheus-enabled" type="checkbox" disabled>Enabled</label>
+            <p class="muted">One service for all claimed exporters. Disabling stops scrapes; stored history is kept.</p>
+            <p id="prometheus-state" role="status" aria-live="polite">Checking…</p>
+            <dl class="prometheus-facts">
+              <div><dt>Discovery</dt><dd id="prometheus-discovery">Checking…</dd></div>
+              <div><dt>Discovered exporters</dt><dd id="prometheus-discovered">Unknown</dd></div>
+              <div><dt>Successful scrapes</dt><dd id="prometheus-scrapes">Unknown</dd></div>
+              <div><dt>Last check</dt><dd id="prometheus-last-check">Not yet checked</dd></div>
+              <div><dt>Last successful discovery</dt><dd id="prometheus-last-discovery">Not yet confirmed</dd></div>
+            </dl>
+            <p class="muted">Successful scrapes do not confirm fresh or healthy BMC collection.</p>
+            <a id="prometheus-open" class="button outline" href="/prometheus/" target="_blank" rel="noopener noreferrer" aria-label="Open Prometheus (opens in a new tab)">Open Prometheus <span aria-hidden="true">↗</span></a>
+            <p id="prometheus-url" class="muted"></p>
+            <p id="prometheus-feedback" role="status" aria-live="polite"></p>
+            <details id="prometheus-operation" hidden><summary id="prometheus-operation-summary">Last operation</summary><p id="prometheus-operation-detail"></p><p id="prometheus-operation-id" class="muted"></p></details>
+            <button id="prometheus-check-status" class="button outline" type="button" hidden>Retry status</button>
+            <button id="prometheus-recover" class="button outline" type="button" hidden>Retry recovery</button>
+          </section>
+          <section class="panel config-panel">
+            <h2>Scraping and storage</h2>
+            <p class="muted">Applying settings restarts Prometheus when Enabled; Disabled remains stopped.</p>
+            <form id="prometheus-settings-form"><fieldset>
+              <div class="prometheus-setting">
+                <div class="prometheus-setting-heading"><label for="prometheus-scrape_interval">Scrape interval (seconds)</label><span class="prometheus-help"><button type="button" class="prometheus-help-button" aria-label="Help for scrape interval" aria-describedby="prometheus-scrape_interval-help" aria-expanded="false">?</button><span id="prometheus-scrape_interval-help" class="prometheus-tooltip" role="tooltip" hidden>Reads the completed exporter cache. Faster scrapes add samples and resource use without triggering BMC collection. Range: 15–3600 seconds.</span></span></div>
+                <input id="prometheus-scrape_interval" name="scrape_interval" type="number" min="15" max="3600" aria-describedby="prometheus-scrape_interval-default prometheus-scrape_interval-help" required disabled>
+                <small id="prometheus-scrape_interval-default" class="muted">Default: 30 seconds</small>
+              </div>
+              <div class="prometheus-setting">
+                <div class="prometheus-setting-heading"><label for="prometheus-scrape_timeout">Scrape timeout (seconds)</label><span class="prometheus-help"><button type="button" class="prometheus-help-button" aria-label="Help for scrape timeout" aria-describedby="prometheus-scrape_timeout-help" aria-expanded="false">?</button><span id="prometheus-scrape_timeout-help" class="prometheus-tooltip" role="tooltip" hidden>Maximum wait for one exporter scrape. Must not exceed the scrape interval. Range: 1–60 seconds.</span></span></div>
+                <input id="prometheus-scrape_timeout" name="scrape_timeout" type="number" min="1" max="60" aria-describedby="prometheus-scrape_timeout-default prometheus-scrape_timeout-help" required disabled>
+                <small id="prometheus-scrape_timeout-default" class="muted">Default: 10 seconds</small>
+              </div>
+              <div class="prometheus-setting">
+                <div class="prometheus-setting-heading"><label for="prometheus-retention_hours">Retention (hours)</label><span class="prometheus-help"><button type="button" class="prometheus-help-button" aria-label="Help for retention" aria-describedby="prometheus-retention_hours-help" aria-expanded="false">?</button><span id="prometheus-retention_hours-help" class="prometheus-tooltip" role="tooltip" hidden>Older stored history is removed. The storage budget may shorten this window. Range: 1–720 hours.</span></span></div>
+                <input id="prometheus-retention_hours" name="retention_hours" type="number" min="1" max="720" aria-describedby="prometheus-retention_hours-default prometheus-retention_hours-help" required disabled>
+                <small id="prometheus-retention_hours-default" class="muted">Default: 24 hours</small>
+              </div>
+              <div class="prometheus-setting">
+                <div class="prometheus-setting-heading"><label for="prometheus-storage_gib">Storage budget (GiB)</label><span class="prometheus-help"><button type="button" class="prometheus-help-button" aria-label="Help for storage budget" aria-describedby="prometheus-storage_gib-help" aria-expanded="false">?</button><span id="prometheus-storage_gib-help" class="prometheus-tooltip" role="tooltip" hidden>Stored-history retention limit. Total disk usage can exceed it; older history may be removed sooner. Range: 1–128 GiB.</span></span></div>
+                <input id="prometheus-storage_gib" name="storage_gib" type="number" min="1" max="128" aria-describedby="prometheus-storage_gib-default prometheus-storage_gib-help" required disabled>
+                <small id="prometheus-storage_gib-default" class="muted">Default: 1 GiB</small>
+              </div>
+              <p id="prometheus-retention-note" class="muted" hidden>Reducing retention or storage can permanently remove older history.</p>
+              <p id="prometheus-settings-error" class="form-error" role="alert" tabindex="-1" hidden></p>
+              <button class="button primary" type="submit" disabled>Apply settings</button>
+            </fieldset></form>
+          </section>
+        </div>
+        <div id="config-console-view" class="config-view" hidden>
+        <section class="panel config-panel"><h2>Virtual console</h2><p class="muted">Keyboard or mouse activity renews the timer. Use Keep console open while watching.</p><form id="console-settings-form"><label>Inactivity timeout (minutes, 1–15)<input name="idle_minutes" type="number" min="1" max="15" required><small>Applies immediately.</small></label><button class="button primary" type="submit">Save console setting</button></form></section>
+        <section class="panel config-panel"><h2>Manager sign-in</h2><p class="muted">Applies immediately. Absolute session limit: 8 hours.</p><form id="login-settings-form"><label>Login inactivity timeout (minutes, 5–120)<input name="login_idle_minutes" type="number" min="5" max="120" required></label><button class="button primary" type="submit">Save sign-in policy</button></form></section>
+        </div>
+        <div id="config-users-view" class="config-view" hidden>
+        <section class="panel config-panel"><div class="panel-heading config-users-heading"><div><h2>Local users</h2></div></div>
+          <div id="config-users" class="user-list"></div>
+          <form id="add-user-form" class="add-user-form"><h3>Add user</h3><label>Username<input name="username" required minlength="1" maxlength="80" autocomplete="off" pattern="[A-Za-z0-9][A-Za-z0-9._-]*"></label><label>Password<input name="password" type="password" required minlength="12" maxlength="256" autocomplete="new-password"></label><label>Role<select name="role"><option value="read-only">Read-only</option><option value="admin">Admin</option></select></label><button class="button primary" type="submit">Add user</button></form>
+        </section>
+        </div>
+        <div id="config-application-view" class="config-view" hidden>
+        <section class="panel config-panel"><h2>Restart manager</h2><p class="muted">Restarts the manager and exporters. Open consoles disconnect.</p><button id="restart-open" class="button outline" type="button">Restart application</button><p id="restart-availability" class="muted" role="status"></p></section>
+        <section class="panel config-panel"><h2>Collection log</h2><p class="muted">Server names, fetch timings, coverage and recovery summaries. No addresses, credentials or readings.</p><p class="muted">Retained up to 14 days or 50 MiB, whichever is reached first.</p><button id="collection-log-download" class="button outline" type="button">Download collection log</button><p id="collection-log-feedback" role="status" aria-live="polite"></p></section>
+        <section class="panel config-panel"><h2>Deployment network</h2><p class="muted">All HTTPS services use one local IP. Optional DNS must resolve to it and appear on the <a href="#/configuration/security">certificate</a>.</p><form id="deployment-form">
+          <fieldset class="deployment-group"><legend>Shared HTTPS address</legend><label>Bind interface and address<select name="bind_address"></select></label><label>Advertised DNS name (optional)<input name="advertised_dns_name" maxlength="253" autocomplete="off" placeholder="Leave empty to use the selected IP"></label><p id="deployment-address-note" class="muted"></p><p id="deployment-impact-preview" role="status" aria-live="polite"></p></fieldset>
+          <fieldset class="deployment-group"><legend>Manager UI and API</legend><label>Port<input name="manager_port" type="number" min="1" max="65535" required></label></fieldset>
+          <fieldset class="deployment-group"><legend>Fleet exporters</legend><p>One port per claimed server.</p><label>First port<input name="port_start" type="number" min="1" max="65535" required></label><label>Last port<input name="port_end" type="number" min="1" max="65535" required></label></fieldset>
+          <fieldset class="deployment-group"><legend>Virtual console gateway</legend><label>Port offset from exporter<input name="console_port_offset" type="number" min="-65534" max="65534" required></label></fieldset>
+          <details id="deployment-preview" class="config-deployment" hidden><summary>Connection preview</summary><div id="deployment-preview-facts" class="config-facts"></div></details>
+          <p class="muted">Applying disconnects scrapes and consoles. If HTTPS checks fail, the previous settings are restored.</p><label class="config-confirm"><input name="acknowledge_interruption" type="checkbox" required> I understand the connection interruption</label><button class="button primary" type="submit">Apply network and restart</button></form><p id="deployment-error" class="config-form-error" role="alert" tabindex="-1"></p><p id="deployment-result" role="status"></p></section>
+        <section class="panel config-panel"><details id="deployment-details" class="config-deployment"><summary>Deployment details</summary><div id="config-deployment-facts" class="config-facts"></div></details></section>
+        </div>
+        <div id="config-security-view" class="config-view" hidden>
+        <section class="panel config-panel"><h2>HTTPS certificate</h2><p id="certificate-status" class="muted" role="status"></p><p id="certificate-trust-note" class="muted"></p><p class="muted">PEM certificate and matching unencrypted key. The certificate must cover the published DNS name, or the selected IP when no DNS is used. The private key is stored with owner-only access and is never shown again.</p><p id="certificate-legacy-host-note" class="muted" hidden>Current published hosts differ. Cover each host in Deployment details until network settings are unified.</p><form id="certificate-form"><label>Certificate PEM<textarea name="certificate_pem" rows="5" required></textarea></label><label>Chain PEM, if supplied<textarea name="chain_pem" rows="4"></textarea></label><label>Private key PEM<textarea name="private_key_pem" rows="5" required autocomplete="off" spellcheck="false"></textarea></label><label class="config-confirm"><input name="acknowledge_interruption" type="checkbox" required> I understand HTTPS connections will restart</label><button class="button primary" type="submit">Install certificate and restart</button></form><p id="certificate-error" class="config-form-error" role="alert" tabindex="-1"></p><div class="config-generate"><h3>Generate an installation certificate</h3><p>New certificates last 10 years. Replacing one restarts HTTPS and requires browsers to trust the new certificate.</p><label>Additional DNS/IP SANs for a planned address change (comma separated)<input id="certificate-extra-hosts" placeholder="manager.example.com, 192.0.2.10"></label><button id="certificate-generate" class="button outline" type="button">Generate certificate and restart</button></div><p id="certificate-generate-error" class="config-form-error" role="alert" tabindex="-1"></p><p id="certificate-result" role="status"></p></section>
+        <section class="panel config-panel"><h2>Outbound BMC trust</h2><p class="muted">For outbound BMC connections. Exporters restart after a change.</p><form id="bmc-ca-form"><label>Custom BMC CA bundle PEM<textarea name="ca_pem" rows="5"></textarea></label><button class="button outline" type="submit">Install BMC CA and restart</button><button id="bmc-ca-clear" class="button danger-link" type="button" hidden>Restore system trust</button></form><p id="bmc-ca-error" class="config-form-error" role="alert" tabindex="-1"></p><p id="bmc-ca-status" class="muted"></p><p id="bmc-ca-result" role="status"></p></section>
+        </div>
+        <div id="config-backup-view" class="config-view" hidden>
+        <section class="panel config-panel"><h2>Restore status</h2><p id="restore-operation-status" role="status" aria-live="polite"></p><button id="restore-check-status" class="button outline" type="button" hidden>Check restore status</button></section>
+        <section class="panel config-panel" aria-labelledby="backup-heading"><h2 id="backup-heading">Create backup</h2><p class="muted">Encrypted archives for migration or recovery.</p><form id="backup-form" class="backup-form"><div class="backup-choices"><div class="backup-choice"><h3>Full installation</h3><p>Users, servers, retained Prometheus history, configuration, certificates, and private keys.</p><button class="button primary" type="submit" name="scope" value="full">Prepare full backup</button></div><div class="backup-choice"><h3>Servers only</h3><p>All claimed servers, local data, and their retained Prometheus history.</p><button class="button outline" type="submit" name="scope" value="servers">Prepare servers backup</button></div></div><p id="backup-passphrase-hint" class="muted">At least 16 characters. Keep it separately; it cannot be recovered.</p><label>Archive passphrase<input name="passphrase" type="password" minlength="16" maxlength="1024" autocomplete="new-password" aria-describedby="backup-passphrase-hint" required></label><label>Confirm passphrase<input name="passphrase_confirm" type="password" minlength="16" maxlength="1024" autocomplete="new-password" required></label><label class="config-confirm"><input name="acknowledge_sensitive" type="checkbox" required> This archive contains sensitive credentials</label><button id="backup-cancel" class="button outline" type="button" hidden>Cancel preparation</button></form><p id="backup-error" class="config-form-error" role="alert" tabindex="-1"></p><p id="backup-result" role="status" aria-live="polite"></p></section>
+        <section class="panel config-panel"><h2>Restore from archive</h2><div class="backup-restore-note"><h3>Preview a restore</h3><p>Validate and review before applying. Preview makes no changes.</p><form id="restore-preview-form" class="backup-form"><label>Encrypted archive<input name="archive" type="file" accept=".c880ab,application/octet-stream" required></label><label>Archive passphrase<input name="passphrase" type="password" minlength="16" maxlength="1024" autocomplete="off" required></label><label>Replacement shared HTTPS IP for a full restore (optional)<select name="replacement_address"><option value="">Use archived address</option></select></label><p class="muted">Replacement uses this IP for all HTTPS services and generates a new self-signed certificate.</p><button class="button outline" type="submit">Validate and preview</button><button id="restore-preview-cancel" class="button outline" type="button" hidden>Cancel preview</button></form><p id="restore-preview-error" class="config-form-error" role="alert" tabindex="-1"></p><p id="restore-preview-status" role="status" aria-live="polite"></p><section id="restore-preview-result" aria-label="Validated restore impact"></section><form id="restore-commit-form" class="backup-form" hidden><h4>Confirm restore</h4><p id="restore-commit-summary"></p><p class="muted">Scrapes and consoles disconnect. HTTPS health checks trigger rollback on failure. You cannot cancel after confirming.</p><label>Archive passphrase again<input name="passphrase" type="password" minlength="16" maxlength="1024" autocomplete="off" required></label><label>Type RESTORE to confirm<input name="confirmation" pattern="RESTORE" autocomplete="off" required></label><label class="config-confirm"><input name="acknowledge_interruption" type="checkbox" required> I have reviewed the restore impact</label><button class="button primary" type="submit">Apply reviewed restore</button></form><p id="restore-operation-error" class="config-form-error" role="alert" tabindex="-1"></p></div></section>
+        </div>
+      </div>
+
+      <div id="events-page" class="view" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Operate / Events</p><h1>Event Timeline</h1></div>
+          <button id="refresh-events" class="button outline">Refresh events</button></div>
+        <section class="panel">
+          <div class="panel-heading event-tools"><div><h2>All events</h2><span id="event-count" class="muted"></span></div>
+            <label class="filter-label">Server <select id="server-filter"><option value="">All Servers</option></select></label></div>
+          <div class="table-wrap event-scroll" tabindex="0" aria-label="Event timeline; scroll horizontally for full columns"><table class="data-table event-table">
+            <colgroup><col class="observed-col"><col class="device-col"><col class="server-col"><col class="severity-col"><col class="message-col"></colgroup>
+            <thead><tr><th>Observed</th><th>Device time</th><th>Server</th><th>Severity</th><th>Message</th></tr></thead><tbody id="event-list"></tbody>
+          </table></div><p id="event-empty" class="empty-state" hidden>No events found for this selection.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="onboard-dialog" aria-labelledby="onboard-title">
+    <div class="dialog-heading"><div><p class="eyebrow">Add to fleet</p><h2 id="onboard-title">Onboard New Server</h2></div><button id="close-onboard" class="icon-button" aria-label="Close onboarding">×</button></div>
+    <p class="muted">Validation runs in the background. Closing this dialog does not stop onboarding.</p>
+    <p id="onboard-error" class="form-error" role="alert" hidden></p>
+    <form id="onboard-form">
+      <label>Display name <input name="name" maxlength="80" required placeholder="e.g. C880A rack 04"></label>
+      <label>BMC IP address <input name="bmc_host" placeholder="10.0.0.10" required></label>
+      <label>BMC HTTPS port <input name="bmc_port" type="number" min="1" max="65535" value="443" required></label>
+      <div class="form-pair"><label>BMC username <input name="username" required autocomplete="off"></label><label>BMC password <input name="password" type="password" required autocomplete="off"></label></div>
+      <label class="check"><input name="insecure_bmc" type="checkbox"> Allow untrusted BMC certificate for this server</label>
+      <label class="check"><input name="manager_metrics_enabled" type="checkbox"> Collect metrics in this manager (additional Redfish reads for live values and 24-hour charts)</label>
+      <div class="dialog-actions"><button id="cancel-onboard" type="button" class="button ghost">Cancel</button><button type="submit" class="button primary">Validate and onboard</button></div>
+    </form>
+  </dialog>
+  <dialog id="event-dialog" aria-labelledby="event-dialog-title">
+    <div class="dialog-heading"><h2 id="event-dialog-title">Event details</h2><button id="close-event" class="icon-button" aria-label="Close event details">×</button></div>
+    <dl id="event-dialog-fields" class="definition-list"></dl>
+  </dialog>
+  <dialog id="user-password-dialog" aria-labelledby="user-password-title">
+    <div class="dialog-heading"><h2 id="user-password-title">Change password</h2><button id="close-user-password" class="icon-button" type="button" aria-label="Close password dialog">×</button></div>
+    <form id="user-password-form" class="password-form">
+      <label>New password<input name="password" type="password" required minlength="12" maxlength="256" autocomplete="new-password"></label>
+      <label>Confirm new password<input name="confirmation" type="password" required minlength="12" maxlength="256" autocomplete="new-password" aria-describedby="user-password-error"></label>
+      <p id="user-password-error" class="form-error" role="alert" hidden>Passwords do not match.</p>
+      <div class="dialog-actions"><button id="cancel-user-password" class="button ghost" type="button">Cancel</button><button class="button primary" type="submit">Change password</button></div>
+    </form>
+  </dialog>
+  <dialog id="unclaim-dialog" aria-labelledby="unclaim-title">
+    <div class="dialog-heading"><h2 id="unclaim-title">Unclaim target</h2><button id="close-unclaim" class="icon-button" type="button" aria-label="Close unclaim dialog">×</button></div>
+    <p id="unclaim-target"></p>
+    <p>Unclaiming stops collection and permanently deletes this target's inventory, manager and managed Prometheus history, event logs, credentials, and settings. Managed scraping pauses during history cleanup. It cannot be undone. External systems and backups are not affected.</p>
+    <label><input id="unclaim-acknowledge" type="checkbox"> I understand this target's local data will be permanently deleted.</label>
+    <div class="dialog-actions"><button id="cancel-unclaim" class="button ghost" type="button">Cancel</button><button id="confirm-unclaim" class="button primary" type="button" disabled>Unclaim and delete data</button></div>
+  </dialog>
+  <dialog id="metric-drawer" aria-labelledby="metric-chart-title">
+    <div class="dialog-heading"><div><p class="eyebrow">Server metrics</p><h2 id="metric-chart-title">Metric history</h2></div><button id="close-metric-drawer" class="icon-button" type="button" aria-label="Close metric chart">×</button></div>
+    <p class="muted">Local history is retained for at most 24 hours and checks for new samples every 15 seconds while open.</p>
+    <label class="drawer-range">Time range <select id="metric-range"><option value="1">Last hour</option><option value="6">Last 6 hours</option><option value="24" selected>Last 24 hours</option></select></label>
+    <div id="metric-chart" class="chart-body"><p class="empty-state">Loading chart…</p></div>
+  </dialog>
+  <dialog id="restart-dialog" aria-labelledby="restart-title">
+    <h2 id="restart-title">Restart application?</h2>
+    <p>The management UI will disconnect briefly. Exporters and open vKVM consoles will stop; in-flight work may need to be retried. This does not restart the host or any BMC.</p>
+    <p id="restart-progress" role="status" aria-live="polite"></p>
+    <div class="dialog-actions"><button id="restart-cancel" class="button ghost" type="button">Cancel</button><button id="restart-confirm" class="button primary" type="button">Restart application</button></div>
+  </dialog>
+  <dialog id="server-action-confirm-dialog" aria-labelledby="server-action-confirm-title">
+    <h2 id="server-action-confirm-title">Confirm server action</h2>
+    <p id="server-action-target"></p>
+    <p id="server-action-check-status" role="status" aria-live="polite"></p>
+    <p id="server-action-impact"></p>
+    <label id="server-action-acknowledge-label"><input id="server-action-acknowledge" type="checkbox"> I understand the impact on this server.</label>
+    <div class="dialog-actions"><button id="cancel-server-action" class="button ghost" type="button">Cancel</button><button id="confirm-server-action" class="button primary" type="button" disabled>Confirm action</button></div>
+  </dialog>
+  <dialog id="connection-dialog" aria-labelledby="connection-title" aria-describedby="connection-message">
+    <h2 id="connection-title" tabindex="-1">Manager connection lost</h2>
+    <p id="connection-message"></p>
+    <p id="connection-status" role="status" aria-live="polite"></p>
+    <div class="dialog-actions">
+      <button id="connection-retry" class="button primary" type="button">Retry</button>
+      <button id="connection-close" class="button ghost" type="button">Close tab</button>
+    </div>
+  </dialog>
+  <div id="server-actions-menu" class="actions-menu" popover="auto" role="menu" aria-label="Server actions"></div>
+</body>
+</html>
