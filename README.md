@@ -12,6 +12,14 @@ A Linux fleet manager for Cisco UCS C880A systems. It provides inventory, events
 
 For daily use, example screenshots and configuration, see the [user guide](USER_GUIDE.md). To run only a synthetic C880A Redfish endpoint, see the [Redfish simulator guide](REDFISH_SIMULATOR_GUIDE.md); the manager is not required.
 
+## Validation and scalability
+
+Tested with one physical Cisco UCS C880A M8 (UCSAI-880A-M8-B302), running BMC firmware 4.0(2.260022) and BIOS C880M8.4.0.2.67, alongside 15 simulated targets. Larger physical fleets have not been qualified; maximum fleet size and resource requirements remain undetermined. Results may vary with firmware, BMC workload and network conditions.
+
+As you add servers, use **Manager host** to monitor CPU and memory usage, and download the **collection log** from **Configuration → Application & Network** to review collection timings and recovery results. Monitor disk and network usage with host tools.
+
+**Project status:** This project is an early 0.x release and may contain bugs or limitations. Feedback and contributions are welcome. Maintenance is provided on a best-effort basis, fixes and response times are not guaranteed.
+
 ## Requirements
 
 Ubuntu Server 24.04 with systemd, Python 3.12, Internet access during installation for Python packages and Prometheus, a non-loopback host IP, and an account with sudo access.
